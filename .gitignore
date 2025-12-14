@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Credentials - NEVER commit these!
+credentials/*.json
+credentials/.env
+*.pem
+*.key
+service-account.json
+
+# Local data
+data_in/
+data_out/
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+
+# Distribution
+dist/
+build/
+*.egg-info/
