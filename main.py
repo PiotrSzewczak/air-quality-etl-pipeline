@@ -9,15 +9,12 @@ Can be deployed as a Google Cloud Function for automated data loading.
 
 import logging
 
-from adapters.openaq import OpenAQRepository
+from adapters.openaq.factory import create_openaq_repository
 from adapters.storage.factory import create_storage
+from adapters.bigquery.factory import create_bigquery_loader
 from application.usecases.fetch_air_quality import FetchAirQualityUseCase
 from config.places import PLACES
-from config.settings import (
-    BASE_OPENAQ_URL,
-    OPENAQ_API_KEY,
-    NUMBER_OF_LOCALITIES_PER_PLACE,
-)
+from config.settings import NUMBER_OF_LOCALITIES_PER_PLACE
 
 # Configure logging
 logging.basicConfig(
@@ -42,16 +39,18 @@ def main(request=None) -> dict:
     logger.info("Starting air quality ETL pipeline")
 
     # Initialize adapters
-    openaq_repository = OpenAQRepository(
-        base_url=BASE_OPENAQ_URL, api_key=OPENAQ_API_KEY
-    )
-
+    openaq_repository = create_openaq_repository()
     storage = create_storage()
+    bigquery_loader = create_bigquery_loader()
+
+    if bigquery_loader:
+        logger.info("BigQuery loading enabled")
 
     # Create and execute use case
     use_case = FetchAirQualityUseCase(
         air_quality_repository=openaq_repository,
         storage=storage,
+        data_warehouse_loader=bigquery_loader,
     )
 
     output_path = use_case.execute(

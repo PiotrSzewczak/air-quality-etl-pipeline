@@ -1,9 +1,11 @@
 import logging
+from typing import Optional
 
 from domain.models import Place, Measurement
 from domain.exceptions import ValidationError
 from ports.air_quality_repository import AirQualityRepository
 from ports.measurement_storage import MeasurementStorage
+from ports.data_warehouse_loader import DataWarehouseLoader
 from domain.validators import validate_measurement
 
 
@@ -19,9 +21,11 @@ class FetchAirQualityUseCase:
         self,
         air_quality_repository: AirQualityRepository,
         storage: MeasurementStorage,
+        data_warehouse_loader: Optional[DataWarehouseLoader] = None,
     ):
         self.air_quality_repository = air_quality_repository
         self.storage = storage
+        self.data_warehouse_loader = data_warehouse_loader
         self.logger = logging.getLogger(__name__)
 
     def fetch_measurements(
@@ -76,5 +80,10 @@ class FetchAirQualityUseCase:
         # Store measurements
         output_path = self.storage.save(measurements)
         self.logger.info(f"Saved measurements to: {output_path}")
+
+        # Load to data warehouse if configured
+        if self.data_warehouse_loader and output_path.startswith("gs://"):
+            rows_loaded = self.data_warehouse_loader.load_from_gcs(output_path)
+            self.logger.info(f"Loaded {rows_loaded} rows to data warehouse")
 
         return output_path

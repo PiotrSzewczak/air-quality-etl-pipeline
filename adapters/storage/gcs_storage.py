@@ -6,6 +6,7 @@ Uses service account key for authentication.
 """
 
 import logging
+from typing import Optional
 
 from google.cloud import storage
 from google.oauth2 import service_account
@@ -26,7 +27,7 @@ class GCSStorage(MeasurementStorage):
     def __init__(
         self,
         bucket_name: str,
-        credentials_path: str,
+        credentials_path: Optional[str] = None,
     ):
         """
         Initialize GCS storage adapter.
@@ -34,20 +35,22 @@ class GCSStorage(MeasurementStorage):
         Args:
             bucket_name: Name of the GCS bucket.
             credentials_path: Path to service account JSON key file.
+                              If None, uses Application Default Credentials.
         """
         self.bucket_name = bucket_name
         self.credentials_path = credentials_path
         self.logger = logging.getLogger(__name__)
         self.csv_writer = CSVWriter()
 
-        # Initialize GCS client with service account credentials
+        # Initialize GCS client
         if credentials_path:
+            self.logger.info(f"Using service account file: {credentials_path}")
             credentials = service_account.Credentials.from_service_account_file(
                 credentials_path
             )
             self.client = storage.Client(credentials=credentials)
-        # For cloud deployments
         else:
+            self.logger.info("Using Application Default Credentials (ADC)")
             self.client = storage.Client()
 
         self.bucket = self.client.bucket(bucket_name)
