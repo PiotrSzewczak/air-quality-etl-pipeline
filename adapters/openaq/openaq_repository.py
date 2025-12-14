@@ -141,7 +141,7 @@ class OpenAQRepository(AirQualityRepository):
         logger.debug(f"Fetching locations for country: {country_iso}")
         response = self.session.get(
             f"{self.BASE_URL}/locations",
-            params={"iso": country_iso},
+            params={"iso": country_iso, "limit": 1000},
         )
         data = self._handle_response(response)
         logger.info(
