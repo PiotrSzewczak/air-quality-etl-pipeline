@@ -222,7 +222,7 @@ gcloud functions deploy air-quality-etl \
   --source=. \
   --entry-point=main \
   --trigger-http \
-  --no-allow-unauthenticated \
+  --allow-unauthenticated \
   --set-env-vars="OPENAQ_API_KEY=xxx,GCS_BUCKET_NAME=xxx,..."
 ```
 
