@@ -124,10 +124,9 @@ class OpenAQRepository(AirQualityRepository):
         logger.info(f"Successfully fetched {len(data['results'])} countries")
         return data["results"]
 
-    @retry_with_backoff(max_retries=3, base_delay=1.0)
     def get_locations(self, country_iso: str) -> list[dict]:
         """
-        Fetch all monitoring locations for a specific country.
+        Fetch all monitoring locations for a specific country with pagination.
 
         Args:
             country_iso: ISO 3166-1 alpha-2 country code (e.g., 'PL', 'GB').
@@ -139,15 +138,60 @@ class OpenAQRepository(AirQualityRepository):
             APIError: If the API request fails after all retries.
         """
         logger.debug(f"Fetching locations for country: {country_iso}")
+
+        all_results: list[dict] = []
+        page = 1
+        limit = 1000
+
+        while True:
+            results, has_more = self._fetch_locations_page(country_iso, page, limit)
+            all_results.extend(results)
+
+            # Stop if no more results or page returned fewer than limit
+            if not has_more or len(results) < limit:
+                break
+
+            page += 1
+
+        logger.info(
+            f"Successfully fetched {len(all_results)} locations for {country_iso}"
+        )
+        return all_results
+
+    @retry_with_backoff(max_retries=3, base_delay=1.0)
+    def _fetch_locations_page(
+        self, country_iso: str, page: int, limit: int
+    ) -> tuple[list[dict], bool]:
+        """
+        Fetch a single page of locations from the API.
+
+        Args:
+            country_iso: ISO country code.
+            page: Page number (1-indexed).
+            limit: Number of results per page.
+
+        Returns:
+            Tuple of (results list, has_more_pages flag).
+        """
         response = self.session.get(
             f"{self.BASE_URL}/locations",
-            params={"iso": country_iso, "limit": 1000},
+            params={"iso": country_iso, "limit": limit, "page": page},
         )
         data = self._handle_response(response)
-        logger.info(
-            f"Successfully fetched {len(data['results'])} locations for {country_iso}"
-        )
-        return data["results"]
+        results = data.get("results", [])
+        meta = data.get("meta", {})
+
+        # Handle "found" which can be int (416) or string (">1000")
+        found = meta.get("found", 0)
+        if isinstance(found, str):
+            # ">1000" means there are more results
+            has_more = True
+        else:
+            # Numeric value - check if we've fetched all
+            fetched_so_far = (page - 1) * limit + len(results)
+            has_more = fetched_so_far < found
+
+        return results, has_more
 
     @retry_with_backoff(max_retries=3, base_delay=1.0)
     def get_latest_for_location(self, location_id: int) -> list[dict]:

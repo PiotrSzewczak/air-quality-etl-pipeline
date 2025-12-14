@@ -82,7 +82,7 @@ gcloud functions deploy ${FUNCTION_NAME} \
     --source=. \
     --entry-point=${ENTRY_POINT} \
     --trigger-http \
-    --allow-unauthenticated \
+    --no-allow-unauthenticated \
     --memory=${MEMORY} \
     --timeout=${TIMEOUT} \
     --set-env-vars="\
